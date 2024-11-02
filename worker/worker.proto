@@ -1,0 +1,32 @@
+syntax = "proto3";
+option go_package = "worker/pb/";
+import "google/protobuf/any.proto";
+
+package worker.pb;
+
+service Worker {
+  rpc Execute(ExecuteRequest) returns (ExecuteResponse) {}
+}
+
+message ExecuteRequest {
+  string MethodName = 1;
+  repeated google.protobuf.Any MethodArgs = 2;
+}
+
+message ExecuteResponse {
+  int32 Status = 1;
+  string Message = 2;
+  google.protobuf.Any Result = 3;
+}
+
+message SimpleString {
+  string value = 1;
+}
+
+message SimpleInt {
+  int64 value = 1;
+}
+
+message SimpleFloat {
+  double value = 1;
+}
