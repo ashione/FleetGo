@@ -92,8 +92,10 @@ func (w *Worker) Execute(ctx context.Context, req *pb.ExecuteRequest) (*pb.Execu
 			switch v := resValue.(type) {
 			case string:
 				result, err = anypb.New(&pb.SimpleString{Value: v})
-			case int, int32, int64:
-				result, err = anypb.New(&pb.SimpleInt{Value: int64(v.(int))}) // 直接使用 int64 类型
+			case int:
+				result, err = anypb.New(&pb.SimpleInt{Value: int64(v)})
+			case int64:
+				result, err = anypb.New(&pb.SimpleInt{Value: v})
 			case float32, float64:
 				result, err = anypb.New(&pb.SimpleFloat{Value: float64(v.(float64))}) // 直接使用 float64 类型
 			default:
@@ -101,29 +103,6 @@ func (w *Worker) Execute(ctx context.Context, req *pb.ExecuteRequest) (*pb.Execu
 				// 注意：这里假设 arg 实现了 ProtoMessage 接口
 				result, err = anypb.New(resValue.(protoreflect.ProtoMessage))
 			}
-			/*
-				switch v := resValue.(type) {
-				case string:
-				case *pb.SimpleString:
-				case *pb.SimpleInt:
-				case *pb.SimpleFloat:
-					// 如果是已知类型，直接使用
-					result, err = anypb.New(v)
-					log.Info("known result", result)
-				default:
-					log.Info("unknown type : ", v)
-					// 如果是未知类型，尝试断言为 proto.Message
-					if pm, ok := v.(proto.Message); ok {
-						result, err = anypb.New(pm)
-						log.Info("result anypb new ", result)
-						//result, err := pm.MarshalAny()
-					} else {
-						log.Error("Not a proto message", result)
-						return &pb.ExecuteResponse{Status: 3, Message: "Result is not a Protobuf message"}, nil
-					}
-				}
-
-			*/
 			if err != nil {
 				return &pb.ExecuteResponse{Status: 3, Message: fmt.Sprintf("Failed to create Any message: %v", err)}, nil
 			}

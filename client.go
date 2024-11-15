@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"time"
 
@@ -41,9 +42,7 @@ func (c *WorkerClient) Close() error {
 	return c.conn.Close()
 }
 
-// CallMethod 调用 Worker 服务上的指定方法
-// 示例主函数，展示如何使用 WorkerClient
-func (c *WorkerClient) CallMethod(ctx context.Context, methodName string, args ...interface{}) (interface{}, error) {
+func (c *WorkerClient) ConvertArgs(args ...interface{}) ([]*anypb.Any, error) {
 	var methodArgs []*anypb.Any
 	for _, arg := range args {
 		var argAny *anypb.Any
@@ -68,7 +67,16 @@ func (c *WorkerClient) CallMethod(ctx context.Context, methodName string, args .
 		}
 		methodArgs = append(methodArgs, argAny)
 	}
+	return methodArgs, nil
+}
 
+// CallMethod 调用 Worker 服务上的指定方法
+// 示例主函数，展示如何使用 WorkerClient
+func (c *WorkerClient) CallMethod(ctx context.Context, methodName string, args ...interface{}) (interface{}, error) {
+	methodArgs, convertErr := c.ConvertArgs(args...)
+	if convertErr != nil {
+		return nil, convertErr
+	}
 	resp, err := c.client.Execute(ctx, &worker_pb.ExecuteRequest{
 		MethodName: methodName,
 		MethodArgs: methodArgs,
@@ -83,18 +91,41 @@ func (c *WorkerClient) CallMethod(ctx context.Context, methodName string, args .
 		return nil, errors.New(resp.Message)
 	}
 
-	if resp.Result != nil {
-		// 假设响应是一个 SimpleString 类型的消息
-		var result worker_pb.SimpleString
-		if err := resp.Result.UnmarshalTo(&result); err != nil {
+	if resp.Result == nil {
+		return nil, fmt.Errorf("response result is nil")
+	}
+
+	// 提取日志和错误处理到一个公共函数中
+	handleUnmarshal := func(result interface{}, err error) (interface{}, error) {
+		if err != nil {
 			c.logger.Printf("Error unmarshalling response: %v\n", err)
 			return nil, err
 		}
-		return result.Value, nil // 返回解码后的字符串
+		return result, nil
 	}
 
-	return nil, nil
+	switch resp.Result.TypeUrl {
+	case "type.googleapis.com/worker.pb.SimpleInt":
+		var result worker_pb.SimpleInt
+		c.logger.Printf("result type %v\n", resp.Result)
+		return handleUnmarshal(result.Value, resp.Result.UnmarshalTo(&result))
+
+	case "type.googleapis.com/worker.pb.SimpleFloat":
+		var result worker_pb.SimpleFloat
+		c.logger.Printf("result type %v\n", resp.Result)
+		return handleUnmarshal(result.Value, resp.Result.UnmarshalTo(&result))
+
+	case "type.googleapis.com/worker.pb.SimpleString":
+		var result worker_pb.SimpleString
+		c.logger.Printf("result type %v\n", resp.Result)
+		return handleUnmarshal(result.Value, resp.Result.UnmarshalTo(&result))
+
+	default:
+		c.logger.Printf("Unknown result type: %v\n", resp.Result.TypeUrl)
+		return nil, fmt.Errorf("unknown result type: %v", resp.Result.TypeUrl)
+	}
 }
+
 func main() {
 	// 创建日志记录器
 	logger := log.New(log.Writer(), "WORKER_CLIENT ", log.LstdFlags|log.Lshortfile)
@@ -104,7 +135,12 @@ func main() {
 	if err != nil {
 		logger.Fatalf("could not create WorkerClient: %v", err)
 	}
-	defer client.Close()
+	defer func(client *WorkerClient) {
+		err := client.Close()
+		if err != nil {
+			logger.Printf("Client close error %+v", err)
+		}
+	}(client)
 
 	// 准备参数
 	arg := "Hello, World!"
@@ -118,11 +154,13 @@ func main() {
 	if err != nil {
 		logger.Fatalf("error when calling method: %v", err)
 	}
-	//arg2 := 1
-	//result2, err2 := client.CallMethod(ctx, "Add", arg2)
-	//if err2 != nil {
-	//	logger.Fatalf("error when calling method: %v", err2)
-	//}
+	arg2 := 1
+	result2, err2 := client.CallMethod(ctx, "Add", arg2)
+	if err2 != nil {
+		logger.Fatalf("error when calling method: %v", err2)
+	} else {
+		logger.Printf("Result %v", result2)
+	}
 
 	// 记录结果
 	logger.Printf("Result from method call: %v\n", result)
