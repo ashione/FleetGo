@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/signal"
 	"reflect"
-	//worker_pb "fleetgo/worker/pb"
 )
 
 // ExampleActor 是一个示例的 Actor 结构体
@@ -43,13 +42,13 @@ func main() {
 	actor := &ExampleActor{}
 
 	// 创建 Worker 实例
-	worker, err := worker.NewWorker(actor, 50051)
+	workerInstance, err := worker.NewWorker(actor, 50051)
 	if err != nil {
-		log.Error("failed to create worker: %v", err)
+		log.Error("failed to create workerInstance: %v", err)
 	}
 
 	// 启动 gRPC 服务器
-	if err := worker.Start(); err != nil {
+	if err := workerInstance.Start(); err != nil {
 		log.Fatal("failed to start gRPC server: %v", err)
 	}
 
@@ -59,5 +58,5 @@ func main() {
 	<-ch
 
 	// 停止 gRPC 服务器
-	worker.Stop()
+	workerInstance.Stop()
 }

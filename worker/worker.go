@@ -117,26 +117,6 @@ func (w *Worker) Execute(ctx context.Context, req *pb.ExecuteRequest) (*pb.Execu
 	return &pb.ExecuteResponse{Status: 0, Message: "", Result: result}, nil
 }
 
-// typeFromString 将字符串转换为对应的 reflect.Type
-func typeFromString(t string) (reflect.Type, error) {
-	switch t {
-	case "string":
-		return reflect.TypeOf(""), nil
-	case "int":
-		return reflect.TypeOf(0), nil
-	case "bool":
-		return reflect.TypeOf(true), nil
-	case "float64":
-		return reflect.TypeOf(0.0), nil
-	case "SimpleString":
-		return reflect.TypeOf(pb.SimpleString{}), nil
-	case "bytes":
-		return reflect.TypeOf([]byte{}), nil
-	default:
-		return nil, fmt.Errorf("unknown type: %s", t)
-	}
-}
-
 // Start 启动 gRPC 服务器
 func (w *Worker) Start() error {
 	log.Println("Starting gRPC server...")
