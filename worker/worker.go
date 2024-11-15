@@ -2,16 +2,16 @@ package worker
 
 import (
 	"context"
-	"google.golang.org/grpc"
-	//"google.golang.org/protobuf/proto"
-	"fleetgo/logger"
-	"fleetgo/worker/pb"
 	"fmt"
-	"google.golang.org/protobuf/reflect/protoreflect"
-	"google.golang.org/protobuf/types/known/anypb"
-	"log"
 	"net"
 	"reflect"
+
+	"fleetgo/logger"
+	"fleetgo/worker/pb"
+
+	"google.golang.org/grpc"
+	"google.golang.org/protobuf/reflect/protoreflect"
+	"google.golang.org/protobuf/types/known/anypb"
 )
 
 // Worker 实现了 Worker 服务
@@ -119,12 +119,14 @@ func (w *Worker) Execute(ctx context.Context, req *pb.ExecuteRequest) (*pb.Execu
 
 // Start 启动 gRPC 服务器
 func (w *Worker) Start() error {
+	log := logger.GetLogger()
 	log.Println("Starting gRPC server...")
 	return w.server.Serve(w.listener)
 }
 
 // Stop 停止 gRPC 服务器
 func (w *Worker) Stop() {
+	log := logger.GetLogger()
 	log.Println("Stopping gRPC server...")
 	w.server.Stop()
 }
